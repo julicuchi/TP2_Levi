@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    function validShoppingItem(data) {
+      return data.keys().hasAll(['name', 'quantity', 'completed', 'createdAt'])
+        && data.keys().hasOnly(['name', 'quantity', 'completed', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.quantity is string && data.quantity.size() <= 60
+        && data.completed is bool && data.createdAt is timestamp;
+    }
+    function validFavorite(data) {
+      return data.keys().hasAll(['name', 'image', 'category', 'createdAt'])
+        && data.keys().hasOnly(['name', 'image', 'category', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.image is string && data.image.size() <= 2048
+        && data.category is string && data.category.size() <= 100
+        && data.createdAt is timestamp;
+    }
+    match /users/{userId}/shopping/{itemId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId) && validShoppingItem(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId) && validShoppingItem(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+    match /users/{userId}/favorites/{mealId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId) && validFavorite(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+    }
+  }
+}
