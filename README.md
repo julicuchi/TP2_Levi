@@ -4,18 +4,31 @@ TP2 de Desarrollo Frontend II · UADE · 2026.
 
 Una app para decidir qué cocinar aprovechando un ingrediente que ya tenés. Consultás recetas de TheMealDB, guardás favoritas y llevás los ingredientes que te faltan a una lista de compras.
 
-## Estado de esta primera entrega de código
+## Enlaces
 
-- Interfaz React + Vite y diseño adaptable implementados.
-- Búsqueda por nombre, ingrediente principal y categoría; detalle con ingredientes y preparación.
-- Código de favoritas, lista de compras y autenticación anónima conectado al SDK de Firebase.
-- Reglas de Firestore limitadas a cada usuario, con validación de documentos.
-- Diseño refinado el 15/11: portada navegable, ingredientes visuales, tarjetas más legibles y detalle de receta rediseñado. Evidencias en `docs/evidencias/`.
-- Mezcla visual del 16/11 con la referencia Cookz: marco blanco sobre durazno, propuestas pastel y tarjetas horizontales con fotos circulares. Compila; revisión visual de esta última iteración pendiente por bloqueo de conexión local en el entorno.
-- Dependencias instaladas; compilación y 10 pruebas unitarias aprobadas. Se probaron la búsqueda real, categorías, detalle, navegación y adaptación a escritorio/celular en navegador.
-- Configuración web del proyecto Firebase incorporada localmente en `.env`. Falta verificar en la consola Authentication anónimo, base Firestore y publicación de reglas.
-- **Pendiente:** completar los servicios de Firebase, verificar operaciones y persistencia, subir a GitHub y publicar en Vercel.
-- Esta base aún **no equivale a una versión funcional verificada** para la entrega. Ver `docs/BITACORA.md`.
+- **App publicada (Vercel):** https://tp-2-levi.vercel.app
+- **Repositorio:** https://github.com/julicuchi/TP2_Levi
+- **Bitácora del proceso:** [Google Docs](https://docs.google.com/document/d/1E3PSPzNH-mnKkyQn35pKiyQNFSaCBDJP/edit?usp=sharing)
+- **Evidencias (capturas y videos por iteración):** [carpeta en Google Drive](https://drive.google.com/drive/folders/1xQWotdFbUjGGiSjUrxjCCPKziIWXw2Ol)
+
+## Estado
+
+- Publicada en Vercel y conectada a Firebase: la versión en línea muestra **Tus listas conectadas**.
+- Authentication anónimo, Cloud Firestore `(default)` y las reglas de `firestore.rules` configurados en el proyecto `que-cocino-frontend`.
+- Búsqueda por nombre, ingrediente y categoría sobre 30 recetas completas en español; detalle con ingredientes y preparación.
+- Favoritas y lista de compras guardadas en Firestore por usuario: agregar, editar cantidad, marcar como comprado y eliminar. Las grabaciones del 16/11 y 17/11 muestran el guardado, la edición y el cambio de estado en la app y los documentos resultantes en Firestore.
+- Diseño adaptable a escritorio y celular, con estados de carga, validaciones y mensajes de éxito o error.
+- 25 pruebas unitarias aprobadas y compilación de producción correcta. Persiste un aviso de tamaño del bundle de JavaScript, sin errores.
+
+### Iteraciones
+
+| Versión | Fecha | Cambios principales |
+| --- | --- | --- |
+| V1 | 10/11 – 13/11 | Base funcional en React + Vite: recetas de TheMealDB, detalle, selección de ingredientes y lista de compras. Firebase todavía sin conectar. |
+| V2 | 15/11 – 16/11 | Rediseño: portada con propuestas, accesos por ingrediente, estados de carga y mezcla con la referencia Cookz (tonos pastel y fotos circulares). |
+| V3 | 16/11 – 17/11 | Firebase conectado (favoritas y compras por usuario), recetario completo en español, publicación en GitHub y Vercel. |
+
+El detalle de cada iteración, las dificultades y las evidencias están en la bitácora y en `docs/BITACORA.md`.
 
 ## Ejecutar
 
@@ -81,6 +94,10 @@ src/
   hooks/useKitchen.js        Suscripciones y operaciones en Firestore
   lib/firebase.js            Configuración e inicio de sesión anónima
   lib/recipes.js             Consultas a TheMealDB y normalización de ingredientes
+  lib/spanishRecipes.js      Búsqueda en español y combinación con el recetario adaptado
+  lib/recipes.es.json        30 recetas completas en español
+  lib/ingredientLabels.js    Nombres de ingredientes y unidades en español
+  lib/recipeTitles.js        Títulos en español (compatibilidad con favoritas anteriores)
   lib/shopping.js            Validaciones y mensajes de error
   styles.css                 Diseño y adaptación a pantallas pequeñas
   refinement.css             Refinamiento visual y ajustes responsive de esta iteración
@@ -115,7 +132,7 @@ Las reglas se publican **en Firebase**. Un despliegue de Vercel no las actualiza
 
 ## Iteraciones y entrega
 
-La consigna exige al menos tres versiones con cambios comprobables, bitácora con evidencias, informe breve y un mini video explicando el funcionamiento. El plan y el estado real de cada etapa están en `docs/`. Entrega indicada: **19/11/2026 a las 13:30**, al inicio de clase.
+La consigna exige al menos tres versiones con cambios comprobables, bitácora con evidencias, informe breve y un mini video explicando el funcionamiento. Las tres versiones están resumidas en la sección **Estado** y documentadas en la [bitácora](https://docs.google.com/document/d/1E3PSPzNH-mnKkyQn35pKiyQNFSaCBDJP/edit?usp=sharing), con capturas y grabaciones de cada etapa. Entrega indicada: **19/11/2026 a las 13:30**, al inicio de clase.
 
 ## Documentación consultada
 
