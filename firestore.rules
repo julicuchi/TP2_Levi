@@ -4,12 +4,26 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
+    // Producto de Día elegido para un ingrediente (opcional).
+    function validProduct(product) {
+      return product is map
+        && product.keys().hasAll(['id', 'name', 'price', 'image', 'link', 'units', 'checkedAt'])
+        && product.keys().hasOnly(['id', 'name', 'price', 'image', 'link', 'units', 'checkedAt'])
+        && product.id is string && product.id.size() > 0 && product.id.size() <= 40
+        && product.name is string && product.name.size() > 0 && product.name.size() <= 200
+        && product.price is number && product.price >= 0 && product.price <= 100000000
+        && product.image is string && product.image.size() <= 2048
+        && product.link is string && product.link.size() <= 2048
+        && product.units is int && product.units >= 1 && product.units <= 99
+        && product.checkedAt is timestamp;
+    }
     function validShoppingItem(data) {
       return data.keys().hasAll(['name', 'quantity', 'completed', 'createdAt'])
-        && data.keys().hasOnly(['name', 'quantity', 'completed', 'createdAt'])
+        && data.keys().hasOnly(['name', 'quantity', 'completed', 'createdAt', 'product'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.quantity is string && data.quantity.size() <= 60
-        && data.completed is bool && data.createdAt is timestamp;
+        && data.completed is bool && data.createdAt is timestamp
+        && (!('product' in data) || validProduct(data.product));
     }
     function validFavorite(data) {
       return data.keys().hasAll(['name', 'image', 'category', 'createdAt'])

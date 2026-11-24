@@ -85,6 +85,7 @@ export default function App() {
         {kitchen.status === 'unconfigured' && page !== 'explore' && <div className="setup-notice"><CircleAlert size={17} /><span>El guardado de tus listas todavía no está habilitado. Mientras tanto, podés explorar todas las recetas.</span></div>}
         {kitchen.status === 'error' && <div className="setup-notice error-notice" role="alert"><CircleAlert size={17} /><span>{kitchen.error}</span><button onClick={kitchen.retry}>Reintentar</button></div>}
 
+        <div className="page-transition" key={page}>
         {page === 'explore' && <>
           <Hero onExplore={scrollToRecipes} onCategory={chooseCategory} />
 
@@ -102,6 +103,7 @@ export default function App() {
 
         {page === 'favorites' && <section className="favorites-page"><div className="page-heading"><span className="eyebrow">PARA VOLVER A COCINAR</span><h1>Tus favoritas<span>.</span></h1><p>Esas recetas que merecen un lugar en tu mesa, una y otra vez.</p></div>{kitchen.status === 'loading' ? <div className="empty-state" role="status"><span className="spinner" /><p>Cargando tus favoritas…</p></div> : favoriteMeals.length ? <div className="recipe-grid">{favoriteMeals.map((meal, index) => <RecipeCard key={meal.idMeal} meal={meal} index={index} saved onOpen={setSelectedId} onSave={kitchen.toggleFavorite} busy={kitchen.busy} />)}</div> : <div className="empty-state favorites-empty"><Heart size={40} strokeWidth={1.2} /><h3>Tu recetario está por empezar</h3><p>{kitchen.status === 'ready' ? 'Tocá el corazón de una receta para guardarla acá.' : 'Podés explorar recetas. Para guardar tus favoritas, primero necesitamos conectar tus listas.'}</p><button className="primary-button" onClick={() => navigate('explore')}>Encontrar mi próxima favorita <ArrowRight size={17} /></button></div>}</section>}
         {page === 'shopping' && <ShoppingList kitchen={kitchen} onExplore={() => navigate('explore')} />}
+        </div>
         <footer className="main-footer"><span>qué cocino<span className="brand-dot">.</span> <span className="footer-divider">/</span> Ideas ricas, días más simples.</span><a href="https://www.themealdb.com" target="_blank" rel="noreferrer">Recetas de TheMealDB <ArrowRight size={13} /></a></footer>
       </div>
     </main>

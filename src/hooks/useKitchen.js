@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, firebaseConfigured, startSession } from '../lib/firebase';
+import { toSavedProduct } from '../lib/prices';
 import { firebaseMessage, validateShoppingItem } from '../lib/shopping';
+
+const productData = (product, units) => ({ ...toSavedProduct(product, units), checkedAt: serverTimestamp() });
 
 export default function useKitchen(notify) {
   const [user, setUser] = useState(null);
@@ -47,8 +50,8 @@ export default function useKitchen(notify) {
     if (!navigator.onLine) { notify('No hay conexión. Conectate a internet para guardar el cambio.', 'error'); return false; }
     setBusy(true);
     try {
-      await action(user.uid);
-      notify(message);
+      const result = await action(user.uid);
+      if (message) notify(typeof message === 'function' ? message(result) : message);
       return true;
     } catch (err) {
       notify(firebaseMessage(err), 'error');
@@ -85,9 +88,33 @@ export default function useKitchen(notify) {
     const batch = writeBatch(db);
     items.forEach((item) => batch.set(doc(collection(db, 'users', uid, 'shopping')), {
       ...validateShoppingItem(item.name, item.quantity), completed: false, createdAt: serverTimestamp(),
+      ...(item.product ? { product: productData(item.product, 1) } : {}),
     }));
     return batch.commit();
-  }, 'Ingredientes agregados a tu lista de compras.');
+  }, items.some((item) => item.product) ? 'Ingredientes agregados con su precio de Día.' : 'Ingredientes agregados a tu lista de compras.');
 
-  return { favorites, shopping, status, error, busy, retry: () => setRetry((value) => value + 1), toggleFavorite, addItem, editItem, toggleItem, removeItem, addIngredients };
+  // Producto de Día elegido para un ingrediente de la lista.
+  const shoppingDoc = (uid, id) => doc(db, 'users', uid, 'shopping', id);
+  const chooseProduct = (item, product) => run((uid) => updateDoc(shoppingDoc(uid, item.id), {
+    product: productData(product, item.product?.units || 1),
+  }), 'Guardamos el producto de Día en tu lista.');
+  const changeUnits = (item, units) => run((uid) => updateDoc(shoppingDoc(uid, item.id), {
+    'product.units': Math.min(99, Math.max(1, units)),
+  }), null);
+  const clearProduct = (item) => run((uid) => updateDoc(shoppingDoc(uid, item.id), { product: deleteField() }), 'Quitaste el producto de Día.');
+  const refreshPrices = (items, fresh) => run(async (uid) => {
+    const byId = new Map(fresh.map((product) => [product.id, product]));
+    const batch = writeBatch(db);
+    let updated = 0;
+    items.forEach((item) => {
+      const product = byId.get(item.product.id);
+      if (!product) return;
+      batch.update(shoppingDoc(uid, item.id), { product: productData(product, item.product.units) });
+      updated += 1;
+    });
+    if (updated) await batch.commit();
+    return { updated, missing: items.length - updated };
+  }, ({ updated, missing }) => `Actualizamos ${updated} ${updated === 1 ? 'precio' : 'precios'}${missing ? `. ${missing} ${missing === 1 ? 'producto ya no está' : 'productos ya no están'} disponible${missing === 1 ? '' : 's'} en Día` : ''}.`);
+
+  return { favorites, shopping, status, error, busy, retry: () => setRetry((value) => value + 1), toggleFavorite, addItem, editItem, toggleItem, removeItem, addIngredients, chooseProduct, changeUnits, clearProduct, refreshPrices };
 }
