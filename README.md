@@ -2,7 +2,7 @@
 
 TP2 de Desarrollo Frontend II · UADE · 2026.
 
-Una app para decidir qué cocinar aprovechando un ingrediente que ya tenés. Consultás recetas de TheMealDB, guardás favoritas y llevás los ingredientes que te faltan a una lista de compras.
+Una app para decidir qué cocinar aprovechando un ingrediente que ya tenés. Consultás recetas de TheMealDB, guardás favoritas y llevás los ingredientes que te faltan a una lista de compras, con precios reales de Día para saber cuánto vas a gastar.
 
 ## Enlaces
 
@@ -17,8 +17,9 @@ Una app para decidir qué cocinar aprovechando un ingrediente que ya tenés. Con
 - Authentication anónimo, Cloud Firestore `(default)` y las reglas de `firestore.rules` configurados en el proyecto `que-cocino-frontend`.
 - Búsqueda por nombre, ingrediente y categoría sobre 30 recetas completas en español; detalle con ingredientes y preparación.
 - Favoritas y lista de compras guardadas en Firestore por usuario: agregar, editar cantidad, marcar como comprado y eliminar. Las grabaciones del 16/11 y 17/11 muestran el guardado, la edición y el cambio de estado en la app y los documentos resultantes en Firestore.
-- Diseño adaptable a escritorio y celular, con estados de carga, validaciones y mensajes de éxito o error.
-- 25 pruebas unitarias aprobadas y compilación de producción correcta. Persiste un aviso de tamaño del bundle de JavaScript, sin errores.
+- Precios de Día Online en la lista de compras y en el detalle de cada receta (mejora para el final, ver más abajo).
+- Diseño adaptable a escritorio y celular, con estados de carga, validaciones, mensajes de éxito o error y animaciones que respetan «reducir movimiento».
+- 37 pruebas unitarias aprobadas y compilación de producción correcta. Persiste un aviso de tamaño del bundle de JavaScript, sin errores.
 
 ### Iteraciones
 
@@ -27,8 +28,38 @@ Una app para decidir qué cocinar aprovechando un ingrediente que ya tenés. Con
 | V1 | 10/11 – 13/11 | Base funcional en React + Vite: recetas de TheMealDB, detalle, selección de ingredientes y lista de compras. Firebase todavía sin conectar. |
 | V2 | 15/11 – 16/11 | Rediseño: portada con propuestas, accesos por ingrediente, estados de carga y mezcla con la referencia Cookz (tonos pastel y fotos circulares). |
 | V3 | 16/11 – 17/11 | Firebase conectado (favoritas y compras por usuario), recetario completo en español, publicación en GitHub y Vercel. |
+| V4 (final) | 24/11 | Precios de Día en compras y recetas, total estimado, rediseño de la lista de compras y animaciones. |
 
-El detalle de cada iteración, las dificultades y las evidencias están en la bitácora y en `docs/BITACORA.md`.
+El detalle de las iteraciones del TP2, las dificultades y las evidencias están en la bitácora y en `docs/BITACORA.md`.
+
+## Mejora para el final: precios de Día
+
+**Qué agrega**
+
+- **Lista de compras:** cada ingrediente tiene el botón **Ver precios en Día**. Despliega los productos de Día Online con foto y precio, y permite buscar otra marca o presentación. El producto elegido se guarda en Firestore junto al ingrediente, con un selector de unidades (− / +) y la fecha del precio.
+- **Total estimado:** la tarjeta del resumen suma los ingredientes pendientes que tienen producto (precio × unidades). Al marcar uno como comprado, deja de sumarse. **Actualizar precios** vuelve a consultar los productos elegidos y guarda los precios nuevos.
+- **Detalle de receta:** al marcar ingredientes se muestra el precio del primer resultado de Día para cada uno y el total aproximado. Al agregarlos a compras se guardan con ese producto, que después se puede cambiar.
+
+**Cómo funciona**
+
+```text
+Navegador (React)  →  /api/dia (función serverless en Vercel)  →  catálogo público de Día Online
+       ↓
+Firestore: users/{uid}/shopping/{itemId}.product
+```
+
+Día no permite llamadas desde otro sitio (no envía cabeceras CORS), así que el navegador no puede consultarlo directo. Por eso `api/dia.js` es una **función serverless de Vercel**: recibe la búsqueda, consulta a Día del lado del servidor y devuelve solo los datos necesarios (id, nombre, precio, imagen y link). Valida la búsqueda, corta la consulta a los 8 segundos y deja que Vercel guarde la respuesta en caché durante 30 minutos.
+
+- `GET /api/dia?q=cebolla`: busca productos (usa la búsqueda inteligente de Día, que acepta varias palabras).
+- `GET /api/dia?ids=141913,55538`: consulta productos por ID para actualizar precios.
+
+En desarrollo, `npm run dev` sirve la misma función desde Vite (`vite.config.js`), así que no hace falta instalar la CLI de Vercel.
+
+**Límites**
+
+- Es el catálogo público que usa la tienda online de Día, no una API oficial documentada: si Día lo cambia, la búsqueda puede dejar de funcionar. La app informa el error y la lista de compras sigue funcionando sin precios.
+- Son precios online: pueden variar según la sucursal y las promociones.
+- En las recetas, el total usa el primer resultado de cada ingrediente, que puede no ser la presentación exacta. Por eso se muestra como aproximado y el producto se puede cambiar desde la lista.
 
 ## Ejecutar
 
@@ -76,22 +107,26 @@ Cada navegador conserva una sesión anónima. Abrir otro navegador o borrar los 
 | Ubicación | Datos | Operaciones |
 | --- | --- | --- |
 | `users/{uid}/favorites/{mealId}` | Nombre mostrado, imagen, categoría, fecha de creación | Consultar, agregar, eliminar |
-| `users/{uid}/shopping/{itemId}` | Nombre, cantidad, comprado/pendiente, fecha de creación | Consultar, agregar, editar, cambiar estado, eliminar |
+| `users/{uid}/shopping/{itemId}` | Nombre, cantidad, comprado/pendiente, fecha de creación y, opcionalmente, `product`: producto de Día elegido (id, nombre, precio, imagen, link, unidades y fecha del precio) | Consultar, agregar, editar, cambiar estado, elegir o quitar producto, cambiar unidades, actualizar precio, eliminar |
 
-Los documentos viven bajo el UID autenticado. Las reglas rechazan accesos de otras identidades y campos adicionales. La app escucha cambios con `onSnapshot`. Los avisos de éxito se muestran luego de que la promesa de escritura termina, no solamente al cambiar una variable de React.
+Los documentos viven bajo el UID autenticado. Las reglas rechazan accesos de otras identidades y campos adicionales, y validan el tipo y el tamaño de cada dato del producto de Día (por ejemplo, unidades entre 1 y 99). Si se reutiliza el proyecto, hay que publicar la versión actual de `firestore.rules`: con las reglas anteriores, Firestore rechaza guardar el producto. La app escucha cambios con `onSnapshot`. Los avisos de éxito se muestran luego de que la promesa de escritura termina, no solamente al cambiar una variable de React.
 
 ## Organización del código
 
 ```text
+api/
+  dia.js                     Función serverless de Vercel que consulta los precios de Día
 src/
   App.jsx                    Navegación, búsqueda, filtros y estados de la pantalla
   components/
     Brand.jsx                Marca compartida entre escritorio y móvil
     Hero.jsx                 Cuatro propuestas pastel con acceso a categorías y desplazamiento horizontal
     RecipeCard.jsx           Tarjeta de receta y botón de favorita
-    RecipeDialog.jsx         Detalle y selección de ingredientes
-    ShoppingList.jsx         Formulario y operaciones de compras
+    RecipeDialog.jsx         Detalle, selección de ingredientes y costo estimado en Día
+    ShoppingList.jsx         Lista de compras, productos elegidos y total estimado
+    DiaPicker.jsx            Buscador de productos de Día para un ingrediente
   hooks/useKitchen.js        Suscripciones y operaciones en Firestore
+  lib/prices.js              Consultas a /api/dia, formato de precios y cálculo de totales
   lib/firebase.js            Configuración e inicio de sesión anónima
   lib/recipes.js             Consultas a TheMealDB y normalización de ingredientes
   lib/spanishRecipes.js      Búsqueda en español y combinación con el recetario adaptado
@@ -101,7 +136,8 @@ src/
   lib/shopping.js            Validaciones y mensajes de error
   styles.css                 Diseño y adaptación a pantallas pequeñas
   refinement.css             Refinamiento visual y ajustes responsive de esta iteración
-tests/                       Pruebas de búsquedas, errores y validaciones
+  mejoras.css                Diseño de precios y animaciones de la mejora final
+tests/                       Pruebas de búsquedas, precios, errores y validaciones
 docs/                        Consigna resumida, bitácora y plan de verificación
 ```
 
@@ -127,6 +163,8 @@ No se utiliza una API de traducción, una clave adicional ni localStorage para r
 4. En **Settings → Environment Variables**, crear las cuatro variables para Production (y Preview si se usan despliegues de prueba). Son configuración web pública.
 5. Desplegar. Si se cambian variables después del build, ejecutar **Redeploy**.
 6. Repetir la lista de pruebas de `docs/VERIFICACION.md` en la URL publicada y en celular.
+
+Vercel publica automáticamente los archivos de `api/` como funciones serverless: `/api/dia` no necesita configuración ni variables de entorno extra.
 
 Las reglas se publican **en Firebase**. Un despliegue de Vercel no las actualiza. No hay integración con Sites: la publicación requerida por la materia es Vercel.
 
